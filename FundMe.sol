@@ -8,27 +8,43 @@ pragma solidity ^0.8.19;
 // importing our created library
 import {PriceConverter} from './PriceConverter.sol';
 
+//custom errors
+error NOtOwner();
+
+//currentl gas cost is 822282 for deployment
 contract FundMe{
     //attaching the price converter library to our contract uint256
     using PriceConverter for uint256;
 
-    uint256 public MinimumUSD = 5e18;
+//introducing constant key word to reduce gas cost
+//this constant key word comes with caps naming conversions
+
+//doing so gas fee droped form 822282 to 802324
+    uint256 public constant MINIMUM_USD = 5e18;
     //keep tracking of the funders adress
     address[] public funders;
     //mapp adresses to amount funded
     mapping(address funder => uint256 amountfunded) public adressToAmountFunded;
 
     //storing the account / contract owner sdress for restricting some calls
-    address public owner;
+    // address public owner;
+
+    //introducing immutable keyword to reduce gas too
+    address public immutable i_owner;
+
+    //this droped gas amount from 802324 to 778733 
     constructor(){
         //set who is the owner at deployment
-        owner = msg.sender;
+        i_owner = msg.sender;
     }
 
     //modifier for modifying how sertain codes excecutes
     modifier onlyOwner(){
-                //implementing the restriction
-        require(msg.sender == owner, "Sender is not the owner");
+        //implementing the restriction
+        // require(msg.sender == i_owner, "Sender is not the owner");
+        if (msg.sender != i_owner) {
+            revert NOtOwner();
+        } // this reduces gas from 778733 to 753608 
         _;
     }
 
@@ -37,9 +53,9 @@ contract FundMe{
     //were setting the limit of amount of fund to be sent
     //1e18 is equivalent to 1 ETH
         // require(msg.value >= 1e18, "you didnt sent enough funds!");
-        // require(GetConversionRate(msg.value) >= MinimumUSD, "you didnt sent enough funds!");
+        // require(GetConversionRate(msg.value) >= MINIMUM_USD, "you didnt sent enough funds!");
         
-        require(msg.value.GetConversionRate() >= MinimumUSD, "you didnt sent enough funds!");
+        require(msg.value.GetConversionRate() >= MINIMUM_USD, "you didnt sent enough funds!");
 
         funders.push(msg.sender);
         adressToAmountFunded[msg.sender] = adressToAmountFunded[msg.sender] + msg.value;
@@ -71,4 +87,14 @@ contract FundMe{
 
         require(CallSuccess, "call failed");
     }
+
+    //receive fn incase msg.data is empty
+    receive() external payable {
+        Fund();
+     }
+
+     //fallback fn
+     fallback() external payable {
+        Fund();
+      }
 }
